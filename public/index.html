@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Blogs Hristov Development</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="fixed-title">
+        <span class="white-text">Hristov</span> <span class="red-text">Development</span>
+    </div>
+    
+    <div class="container">
+        <!-- Pantalla 1: Ingresar Título -->
+        <div id="step-1" class="step">
+            <h2>Paso 1: Escribe un Título Sugerido</h2>
+            <input type="text" id="suggested-title" placeholder="Introduce un título sugerido" required>
+            <button id="next-button">Siguiente</button>
+        </div>
+
+        <!-- Pantalla 2: Mostrar Opciones de Título -->
+        <div id="step-2" class="step" style="display: none;">
+            <h2>Paso 2: Selecciona una Opción de Título</h2>
+            <div id="titles-buttons"></div>
+        </div>
+
+       <!-- Pantalla 3: Configurar Blog -->
+<div id="step-3" class="step" style="display: none;">
+    <h2>Paso 3: Configura tu Blog</h2>
+    
+    <div class="form-group">
+        <label for="keywords">Palabras clave:</label>
+        <input type="text" id="keywords" placeholder="Separar por comas" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="style">Estilo de redacción:</label>
+        <select id="style" required>
+            <option value="informativo">Informativo</option>
+            <option value="casual">Casual</option>
+            <option value="técnico">Técnico</option>
+            <option value="muy sarcastico e ironico">Sarcástico irónico</option>
+            <option value="humor">Humor</option>
+            <option value="persuasivo">Persuasivo</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="length">Tamaño del post:</label>
+        <select id="length" required>
+            <option value="corto">Corto (200-400 palabras)</option>
+            <option value="medio">Medio (400-600 palabras)</option>
+            <option value="largo">Largo (600-1000 palabras)</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <button id="generate-button">Generar Blog</button>
+    </div>
+</div>
+
+
+        <!-- Indicador de Carga y Enlace de Descarga -->
+        <div id="loading" style="display: none;">Cargando, por favor espera...</div>
+        <a id="download-link" style="display:none;" download="blog.txt">Descargar Blog</a>
+    </div>
+
+    <script>
+        const nextButton = document.getElementById('next-button');
+        const generateButton = document.getElementById('generate-button');
+        const titlesButtons = document.getElementById('titles-buttons');
+        const loadingIndicator = document.getElementById('loading');
+        const downloadLink = document.getElementById('download-link');
+        const suggestedTitleInput = document.getElementById('suggested-title');
+        const styleSelect = document.getElementById('style');
+        const lengthSelect = document.getElementById('length');
+        const keywordsInput = document.getElementById('keywords');
+
+        let selectedTitle = '';
+
+        // Navegar a la Pantalla 2
+        nextButton.addEventListener('click', async () => {
+            const suggestedTitle = suggestedTitleInput.value;
+            if (!suggestedTitle) {
+                alert("Por favor, ingrese un título sugerido.");
+                return;
+            }
+
+            // Mostrar indicador de carga y generar títulos
+            loadingIndicator.style.display = 'block';
+            try {
+                const response = await fetch('/generate-titles', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ suggestedTitle })
+                });
+
+                const data = await response.json();
+                titlesButtons.innerHTML = '';
+                data.titles.forEach((title) => {
+                    const button = document.createElement('button');
+                    button.textContent = title;
+                    button.classList.add('title-button');
+                    button.addEventListener('click', () => {
+                        selectedTitle = title;
+                        goToStep(3); // Ir a la Pantalla 3
+                    });
+                    titlesButtons.appendChild(button);
+                });
+
+                goToStep(2); // Ir a la Pantalla 2
+            } catch (error) {
+                alert('Hubo un error al generar los títulos.');
+            } finally {
+                loadingIndicator.style.display = 'none';
+            }
+        });
+
+        // Generar el Blog
+        generateButton.addEventListener('click', async () => {
+            const style = styleSelect.value;
+            const length = lengthSelect.value;
+            const keywords = keywordsInput.value;
+
+            if (!selectedTitle) {
+                alert("Por favor, seleccione un título.");
+                return;
+            }
+
+            loadingIndicator.style.display = 'block';
+            downloadLink.style.display = 'none';
+
+            try {
+                const response = await fetch('/create-blog', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ title: selectedTitle, style, length, keywords })
+                });
+
+                const data = await response.blob();
+                downloadLink.href = URL.createObjectURL(data);
+                downloadLink.style.display = 'block';
+                downloadLink.textContent = 'Descargar Blog';
+            } catch (error) {
+                alert('Hubo un error al generar el blog. Inténtalo de nuevo.');
+            } finally {
+                loadingIndicator.style.display = 'none';
+            }
+        });
+
+        function goToStep(stepNumber) {
+            document.querySelectorAll('.step').forEach((step) => {
+                step.style.display = 'none';
+            });
+            document.getElementById(`step-${stepNumber}`).style.display = 'block';
+        }
+    </script>
+</body>
+</html>
